@@ -2,19 +2,19 @@ resources:
 - name: source-code
   type: git
   source:
-    uri: ((engage-api.codeRepo))
-    branch: main
+    uri: ((engage-api-app-secrets.codeRepo))
+    branch: master
 - name: config-repo
   type: git
   source:
-    uri: ((engage-api.configRepo))
+    uri: ((engage-api-app-secrets.configRepo))
     branch: master
     paths:
      - "k8s/**"
 - name: app-image
   type: docker-image
   source:
-    repository: ((engage-api.image))
+    repository: ((engage-api-app-secrets.image))
     tag: latest
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
               cp target/*.jar ../target
     - task: update-build-service-image
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigBuildServer))
+        KUBECONFIG_JSON: ((engage-api-common-secrets.kubeconfigBuildServer))
       input_mapping:
         target: target
       config:
@@ -61,9 +61,9 @@ jobs:
         image_resource:
           type: docker-image
           source:
-            repository: ((common-secrets.concourseHelperImage))
-            username: ((common-secrets.harborUser))
-            password: ((common-secrets.harborPassword))
+            repository: ((engage-api-common-secrets.concourseHelperImage))
+            username: ((engage-api-common-secrets.harborUser))
+            password: ((engage-api-common-secrets.harborPassword))
             tag: latest
         inputs:
           - name: target
@@ -72,14 +72,14 @@ jobs:
           args:
             - -c
             - |
-              docker login ((common-secrets.harborDomain)) -u '((common-secrets.harborUser))' -p '((common-secrets.harborPassword))'
+              docker login ((engage-api-common-secrets.harborDomain)) -u '((engage-api-common-secrets.harborUser))' -p '((engage-api-common-secrets.harborPassword))'
               echo $KUBECONFIG_JSON>tools-kubeconfig.json
               export KUBECONFIG=tools-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesBuildServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesBuildCluster)) --user=concourse
+              kubectl config set-credentials concourse --token=((engage-api-common-secrets.kubernetesBuildServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((engage-api-common-secrets.kubernetesBuildCluster)) --user=concourse
               kubectl config use-context concourse-context
               set +e
-              kp image list -n ((engage-api.tbsNamespace)) | grep "engage-api" 
+              kp image list -n ((engage-api-app-secrets.tbsNamespace)) | grep "engage-api-app-secrets" 
               exists=$?
               set -e
 
@@ -87,15 +87,15 @@ jobs:
 
               if [ $exists -eq 0 ]; then
                 kp image patch engage-api \
-                  --namespace ((engage-api.tbsNamespace)) \
+                  --namespace ((engage-api-app-secrets.tbsNamespace)) \
                   --wait \
-                  --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
+                  --local-path target/engage-api-0.0.1-SNAPSHOT.jar
               else
                 kp image create engage-api \
-                  --tag ((engage-api.image)) \
-                  --namespace ((engage-api.tbsNamespace)) \
+                  --tag ((engage-api-app-secrets.image)) \
+                  --namespace ((engage-api-app-secrets.tbsNamespace)) \
                   --wait \
-                  --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
+                  --local-path target/engage-api-0.0.1-SNAPSHOT.jar
               fi
 
 
@@ -107,16 +107,16 @@ jobs:
       trigger: true
     - task: deploy-rabbitmq
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+        KUBECONFIG_JSON: ((engage-api-common-secrets.kubeconfigDeployServer))
       config:
         platform: linux
         image_resource:
           type: docker-image
           source:
-            repository: ((common-secrets.concourseHelperImage))
+            repository: ((engage-api-common-secrets.concourseHelperImage))
             tag: latest
-            username: ((common-secrets.harborUser))
-            password: ((common-secrets.harborPassword))
+            username: ((engage-api-common-secrets.harborUser))
+            password: ((engage-api-common-secrets.harborPassword))
         inputs:
           - name: config-repo
         run:
@@ -127,11 +127,11 @@ jobs:
               # TODO Need to setup the kubeconfig
               echo $KUBECONFIG_JSON>run-kubeconfig.json
               export KUBECONFIG=run-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config set-credentials concourse --token=((engage-api-common-secrets.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((engage-api-common-secrets.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
               # kubectl create namespace edge-data-services
-              pivnet login --api-token=((common-secrets.pivnetApiToken))
+              pivnet login --api-token=((engage-api-common-secrets.pivnetApiToken))
               pivnet download-product-files --product-slug='p-rabbitmq-for-kubernetes' --release-version='1.0.0' --product-file-id=866685
               
               mkdir rabbitmq-operator
@@ -157,17 +157,17 @@ jobs:
     - get: config-repo
     - task: create-wavefront-event
       params:
-        WAVEFRONT_API_TOKEN: ((engage-api.wavefrontApiToken))
-        WAVEFRONT_URL: ((engage-api.wavefrontUri))
-        WAVEFRONT_DEPLOY_EVENT_NAME: ((engage-api.wavefrontDeployEventName))
+        WAVEFRONT_API_TOKEN: ((engage-api-app-secrets.wavefrontApiToken))
+        WAVEFRONT_URL: ((engage-api-app-secrets.wavefrontUri))
+        WAVEFRONT_DEPLOY_EVENT_NAME: ((engage-api-app-secrets.wavefrontDeployEventName))
       config:
         platform: linux
         image_resource:
           type: docker-image
           source:
-            repository: ((common-secrets.concourseHelperImage))
-            username: ((common-secrets.harborUser))
-            password: ((common-secrets.harborPassword))
+            repository: ((engage-api-common-secrets.concourseHelperImage))
+            username: ((engage-api-common-secrets.harborUser))
+            password: ((engage-api-common-secrets.harborPassword))
             tag: latest
         run:
           path: /bin/bash
@@ -190,7 +190,7 @@ jobs:
                   \"annotations\": {
                     \"severity\": \"info\",
                     \"type\": \"image deploy\",
-                    \"details\": \"new engage-api image deployed\"
+                    \"details\": \"new engage-api-app-secrets image deployed\"
                   },
                   \"startTime\": "${START_TIME}",
                   \"endTime\": "${END_TIME}"
@@ -198,17 +198,17 @@ jobs:
 
     - task: deploy-app
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
-        SERVERLESS: ((engage-api.serverless))
+        KUBECONFIG_JSON: ((engage-api-common-secrets.kubeconfigDeployServer))
+        SERVERLESS: ((engage-api-app-secrets.serverless))
       config:
         platform: linux
         image_resource:
           type: docker-image
           source:
-            repository: ((common-secrets.concourseHelperImage))
+            repository: ((engage-api-common-secrets.concourseHelperImage))
             tag: latest
-            username: ((common-secrets.harborUser))
-            password: ((common-secrets.harborPassword))
+            username: ((engage-api-common-secrets.harborUser))
+            password: ((engage-api-common-secrets.harborPassword))
         inputs:
           - name: config-repo
           - name: app-image
@@ -222,8 +222,8 @@ jobs:
               # TODO Need to setup the kubeconfig
               echo $KUBECONFIG_JSON>run-kubeconfig.json
               export KUBECONFIG=run-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config set-credentials concourse --token=((engage-api-common-secrets.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((engage-api-common-secrets.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
 
               export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.username}' | base64 --decode)
@@ -233,11 +233,11 @@ jobs:
               export i=100
               if [ "$SERVERLESS" = "true" ]; then
                  ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                    -v image=((engage-api.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
+                    -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
                     kn service create -f myservice.yaml -n apps --force
               else
                  ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
                     -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                    -v image=((engage-api.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
+                    -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
               fi
 

@@ -10,9 +10,9 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.articulate</groupId>
-	<artifactId>egage-api</artifactId>
+	<artifactId>engage-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>egage-api</name>
+	<name>engage-api</name>
 	<description>Core API for Articulate Change</description>
 	<properties>
 		<java.version>11</java.version>
