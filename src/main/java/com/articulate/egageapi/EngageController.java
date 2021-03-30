@@ -23,7 +23,7 @@ public class EngageController {
 		headers.setCacheControl(CacheControl.noCache().getHeaderValue());
 		byte[] media = null;
 		try {
-			media = qrcodeHelper.generateQRCodeImage("test");
+			media = qrcodeHelper.generateQRCodeImage("You'll break your shoulder, Paul!");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
