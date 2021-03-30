@@ -1,0 +1,25 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: engage-api
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target: "10"
+    spec:
+      containers:
+      - image: harbor...
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: cloud
+        - name: MANAGEMENT_METRICS_EXPORT_WAVEFRONT_URI
+          value: proxy://wavefront-proxy-tanzu.tanzu-observability-saas:2878
+        - name: SPRING_RABBITMQ_HOST
+          value: edge-pos-messaging.edge-data-services.svc.cluster.local
+        - name: SPRING_RABBITMQ_PASSWORD
+          value: tanzu
+        - name: SPRING_RABBITMQ_USER
+          value: tanzu
