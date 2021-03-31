@@ -79,7 +79,7 @@ jobs:
               kubectl config set-context concourse-context --cluster=((engage-api-common-secrets.kubernetesBuildCluster)) --user=concourse
               kubectl config use-context concourse-context
               set +e
-              kp image list -n ((engage-api-app-secrets.tbsNamespace)) | grep "engage-api-app-secrets" 
+              kp image list -n ((engage-api-app-secrets.tbsNamespace)) | grep "engage-api" 
               exists=$?
               set -e
 
@@ -229,9 +229,10 @@ jobs:
               if [ "$SERVERLESS" = "true" ]; then
                  ytt -f config-repo/deployment/values.yml -f config-repo/deployment/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
                     -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
+                    cat myservice.yaml
                     kn service create -f myservice.yaml -n apps --force
               else
-                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
+                 ytt -f config-repo/deployment/values.yml -f config-repo/deployment/configmap.yaml -f config-repo/deployment/deployment.yaml -f config-repo/deployment/svc.yaml \
                     -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
                     -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a engage-service -y -f -
               fi
