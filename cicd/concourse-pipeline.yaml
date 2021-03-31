@@ -10,7 +10,7 @@ resources:
     uri: ((engage-api-app-secrets.configRepo))
     branch: master
     paths:
-     - "k8s/**"
+     - "deployment/**"
 - name: app-image
   type: docker-image
   source:
@@ -99,7 +99,7 @@ jobs:
               fi
 
 
-- name: bootstrap-in-store-services  
+- name: bootstrap-data-services  
   public: true
   serial: true
   plan:
@@ -190,7 +190,7 @@ jobs:
                   \"annotations\": {
                     \"severity\": \"info\",
                     \"type\": \"image deploy\",
-                    \"details\": \"new engage-api-app-secrets image deployed\"
+                    \"details\": \"new engage-api image deployed\"
                   },
                   \"startTime\": "${START_TIME}",
                   \"endTime\": "${END_TIME}"
@@ -226,18 +226,13 @@ jobs:
               kubectl config set-context concourse-context --cluster=((engage-api-common-secrets.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
 
-              export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.username}' | base64 --decode)
-              export EDGE_RMQ_PSWD=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.password}' | base64 --decode) 
-
-              # for now only one store
-              export i=100
               if [ "$SERVERLESS" = "true" ]; then
-                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
+                 ytt -f config-repo/deployment/values.yml -f config-repo/deployment/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
                     -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
                     kn service create -f myservice.yaml -n apps --force
               else
                  ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
                     -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                    -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
+                    -v image=((engage-api-app-secrets.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a engage-service -y -f -
               fi
 
